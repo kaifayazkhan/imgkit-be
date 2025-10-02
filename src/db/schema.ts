@@ -17,6 +17,8 @@ export const users = pgTable('user_profile', {
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
 
+export type User = typeof users.$inferSelect;
+
 export const userImage = pgTable('user_image', {
   id: serial('id').primaryKey(),
   userId: integer('user_id')
