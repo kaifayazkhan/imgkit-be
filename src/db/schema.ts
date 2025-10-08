@@ -30,6 +30,8 @@ export const userImage = pgTable('user_image', {
   uploadedAt: timestamp('uploaded_at').defaultNow().notNull(),
 });
 
+export type UserImage = typeof userImage.$inferSelect;
+
 export const transformedImage = pgTable('transformed_image', {
   id: serial('id').primaryKey(),
   storageKey: text('storage_key').notNull(),
