@@ -2,6 +2,7 @@ import type { Request, Response } from 'express';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import { asyncHandler } from '../utils/asyncHandler.js';
+import ApiResponse from '../utils/apiResponse.js';
 import AppError from '../utils/appError.js';
 import { RegisterUserSchema, LoginUserSchema } from '../validations/user.js';
 import UserModel from '../models/user.model.js';
@@ -30,11 +31,19 @@ export const register = asyncHandler(async (req: Request, res: Response) => {
 
   const newUser = await UserModel.create(name, email, hashedPassword);
 
-  return res.status(201).json({
-    success: true,
-    message: 'User registered successfully',
-    data: newUser,
-  });
+  if (!newUser) {
+    throw new AppError(500, 'Failed to register');
+  }
+
+  return new ApiResponse(
+    201,
+    {
+      id: newUser.id,
+      name: newUser.name,
+      email: newUser.email,
+    },
+    'User registered successfully'
+  ).send(res);
 });
 
 export const login = asyncHandler(async (req: Request, res: Response) => {
@@ -69,18 +78,18 @@ export const login = asyncHandler(async (req: Request, res: Response) => {
     sameSite: 'strict' as const,
   };
 
-  res
-    .status(200)
-    .cookie('accessToken', accessToken, cookieOptions)
-    .cookie('refreshToken', refreshToken, cookieOptions)
-    .json({
-      success: true,
-      data: {
-        id: user.id,
-        email: user.email,
-        accessToken,
-      },
-    });
+  res.cookie('accessToken', accessToken, cookieOptions);
+  res.cookie('refreshToken', refreshToken, cookieOptions);
+
+  return new ApiResponse(
+    200,
+    {
+      id: user.id,
+      email: user.email,
+      access_token: accessToken,
+    },
+    'Login successful'
+  ).send(res);
 });
 
 export const logout = asyncHandler(async (req: Request, res: Response) => {
@@ -97,14 +106,10 @@ export const logout = asyncHandler(async (req: Request, res: Response) => {
     sameSite: 'strict' as const,
   };
 
-  res
-    .status(200)
-    .clearCookie('accessToken', cookieOptions)
-    .clearCookie('refreshToken', cookieOptions)
-    .json({
-      success: true,
-      message: 'Logout successful',
-    });
+  res.clearCookie('accessToken', cookieOptions);
+  res.clearCookie('refreshToken', cookieOptions);
+
+  return new ApiResponse(200, {}, 'Logout successful').send(res);
 });
 
 export const refresh = asyncHandler(async (req: Request, res: Response) => {
@@ -145,10 +150,9 @@ export const refresh = asyncHandler(async (req: Request, res: Response) => {
     sameSite: 'strict' as const,
   };
 
-  res.status(200).cookie('accessToken', accessToken, cookieOptions).json({
-    success: true,
-    data: {
-      accessToken,
-    },
-  });
+  res.cookie('accessToken', accessToken, cookieOptions);
+
+  return new ApiResponse(200, {
+    access_token: accessToken,
+  }).send(res);
 });

@@ -9,6 +9,7 @@ import ImageModel from '../models/image.model.js';
 import { applyTransformations } from '../utils/sharp.js';
 import { env } from '../config/env.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
+import ApiResponse from '../utils/apiResponse.js';
 import AppError from '../utils/appError.js';
 import type { TransformedImageResponse } from '../types/image.type.js';
 
@@ -42,14 +43,15 @@ export const uploadImage = asyncHandler(async (req: Request, res: Response) => {
     throw new AppError(500, 'Failed to create image record in database');
   }
 
-  res.status(200).json({
-    success: true,
-    data: {
+  return new ApiResponse(
+    201,
+    {
       upload_url: uploadUrl,
       image_id: imageId.id,
       storage_key: storageKey,
     },
-  });
+    'Upload URL generated successfully'
+  ).send(res);
 });
 
 export const transformImage = asyncHandler(
@@ -128,15 +130,12 @@ export const transformImage = asyncHandler(
 
     const transformedImageURL = `${env.IMAGE_DOMAIN}/${transformedImage.storageKey}`;
 
-    return res.status(200).json({
-      success: true,
-      data: {
-        id: transformedImage.id,
-        original_image_url: imageURL,
-        transformed_image_url: transformedImageURL,
-        mime_type: imageMimeType,
-      },
-    });
+    return new ApiResponse(201, {
+      id: transformedImage.id,
+      original_image_url: imageURL,
+      transformed_image_url: transformedImageURL,
+      mime_type: imageMimeType,
+    }).send(res);
   }
 );
 
@@ -159,17 +158,14 @@ export const getTransformedImageById = asyncHandler(
       throw new AppError(404, 'Image not found');
     }
 
-    return res.status(200).json({
-      success: true,
-      data: {
-        id: image.id,
-        transformed_image_url: `${env.IMAGE_DOMAIN}/${image.transformedImageKey}`,
-        original_image_url: `${env.IMAGE_DOMAIN}/${image.originalImageKey}`,
-        size_in_bytes: image.sizeInBytes,
-        mime_type: image.mimeType,
-        created_at: image.createdAt,
-      },
-    });
+    return new ApiResponse(200, {
+      id: image.id,
+      transformed_image_url: `${env.IMAGE_DOMAIN}/${image.transformedImageKey}`,
+      original_image_url: `${env.IMAGE_DOMAIN}/${image.originalImageKey}`,
+      size_in_bytes: image.sizeInBytes,
+      mime_type: image.mimeType,
+      created_at: image.createdAt,
+    }).send(res);
   }
 );
 
@@ -188,16 +184,12 @@ export const getUserTransformedImages = asyncHandler(
       await ImageModel.findAllTransformedImagesForUser(userId, limit, offset);
 
     if (result.length === 0) {
-      return res.status(200).json({
-        success: true,
-        data: [],
-        meta: {
-          total: 0,
-          total_pages: 0,
-          page_size: limit,
-          current_page: page,
-        },
-      });
+      return new ApiResponse(200, [], '', {
+        total: 0,
+        total_pages: 0,
+        page_size: limit,
+        current_page: page,
+      }).send(res);
     }
 
     let images: TransformedImageResponse[] = [];
@@ -213,15 +205,11 @@ export const getUserTransformedImages = asyncHandler(
       });
     }
 
-    return res.status(200).json({
-      success: true,
-      data: images,
-      meta: {
-        total: total,
-        total_pages: Math.ceil(total / limit),
-        page_size: limit,
-        current_page: page,
-      },
-    });
+    return new ApiResponse(200, images, '', {
+      total: total,
+      total_pages: Math.ceil(total / limit),
+      page_size: limit,
+      current_page: page,
+    }).send(res);
   }
 );
