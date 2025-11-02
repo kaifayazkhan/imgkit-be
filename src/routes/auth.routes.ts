@@ -29,6 +29,6 @@ const registerLimiter = rateLimit({
 router.route('/register').post(registerLimiter, register);
 router.route('/login').post(loginLimiter, login);
 router.route('/logout').post(verifyJWT, logout);
-router.route('/refresh').get(refresh);
+router.route('/refresh').post(refresh);
 
 export default router;
