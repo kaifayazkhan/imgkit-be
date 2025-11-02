@@ -10,6 +10,7 @@ import {
   generateAccessAndRefreshToken,
   generateAccessToken,
 } from '../utils/generateToken.js';
+import { cookieOptions } from '../utils/cookie.js';
 import { env } from '../config/env.js';
 
 export const register = asyncHandler(async (req: Request, res: Response) => {
@@ -72,12 +73,6 @@ export const login = asyncHandler(async (req: Request, res: Response) => {
   const hashedRefreshToken = await bcrypt.hash(refreshToken, 10);
   await UserModel.saveRefreshToken(hashedRefreshToken, user.id);
 
-  const cookieOptions = {
-    httpOnly: true,
-    secure: true,
-    sameSite: 'strict' as const,
-  };
-
   res.cookie('accessToken', accessToken, cookieOptions);
   res.cookie('refreshToken', refreshToken, cookieOptions);
 
@@ -100,12 +95,6 @@ export const logout = asyncHandler(async (req: Request, res: Response) => {
   const userId = Number(req.user.id);
   await UserModel.saveRefreshToken(null, userId);
 
-  const cookieOptions = {
-    httpOnly: true,
-    secure: true,
-    sameSite: 'strict' as const,
-  };
-
   res.clearCookie('accessToken', cookieOptions);
   res.clearCookie('refreshToken', cookieOptions);
 
@@ -114,7 +103,6 @@ export const logout = asyncHandler(async (req: Request, res: Response) => {
 
 export const refresh = asyncHandler(async (req: Request, res: Response) => {
   const refreshToken = req.cookies?.refreshToken;
-
   if (!refreshToken) {
     throw new AppError(400, 'Missing refresh token');
   }
@@ -143,12 +131,6 @@ export const refresh = asyncHandler(async (req: Request, res: Response) => {
   }
 
   const accessToken = generateAccessToken(userId);
-
-  const cookieOptions = {
-    httpOnly: true,
-    secure: true,
-    sameSite: 'strict' as const,
-  };
 
   res.cookie('accessToken', accessToken, cookieOptions);
 
