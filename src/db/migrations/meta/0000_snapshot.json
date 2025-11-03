@@ -52,12 +52,8 @@
           "name": "transformed_image_original_image_id_user_image_id_fk",
           "tableFrom": "transformed_image",
           "tableTo": "user_image",
-          "columnsFrom": [
-            "original_image_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["original_image_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -116,12 +112,8 @@
           "name": "user_image_user_id_user_profile_id_fk",
           "tableFrom": "user_image",
           "tableTo": "user_profile",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -188,9 +180,7 @@
         "user_profile_email_unique": {
           "name": "user_profile_email_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "email"
-          ]
+          "columns": ["email"]
         }
       },
       "policies": {},
