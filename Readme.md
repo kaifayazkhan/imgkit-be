@@ -1,6 +1,7 @@
 # Image Processing API
 
 A RESTful API built with **Node.js + Express** that allows users to:
+
 - Register and log in securely using JWT authentication
 - Upload images via pre-signed S3 URLs
 - Perform image transformations (resize, format conversion, grayscale, etc.)
@@ -38,6 +39,7 @@ pnpm install
 ```
 
 ### Configure environment variables
+
 Create a .env file in the root with the following:
 
 ```bash
@@ -64,6 +66,7 @@ IMAGE_DOMAIN=your_cloudfront_url
 ```
 
 ### Run the app
+
 ```bash
 npm run dev
 ```
@@ -71,16 +74,14 @@ npm run dev
 Server will start at:
 http://localhost:3000
 
-
 ### Authentication Flow
 
-| Step  | Endpoint                | Method | Description                              |
-|-------| ----------------------- | ------ |------------------------------------------|
-| 1     | `/api/v1/auth/register` | POST   | Register a new user                      |
-| 2     | `/api/v1/auth/login`    | POST   | Login and receive tokens                 |
-| 3     | `/api/v1/auth/refresh`  | GET    | Refresh access token using stored cookie |
-| 4     | `/api/v1/auth/logout`   | POST   | Logout and clear cookies                 |
-
+| Step | Endpoint                | Method | Description                              |
+| ---- | ----------------------- |--------| ---------------------------------------- |
+| 1    | `/api/v1/auth/register` | POST   | Register a new user                      |
+| 2    | `/api/v1/auth/login`    | POST   | Login and receive tokens                 |
+| 3    | `/api/v1/auth/refresh`  | POST   | Refresh access token using stored cookie |
+| 4    | `/api/v1/auth/logout`   | POST   | Logout and clear cookies                 |
 
 ### Image Endpoints
 

@@ -1,6 +1,6 @@
 import { desc, eq, sql, and } from 'drizzle-orm';
 import { db } from '../db/index.js';
-import { transformedImage, userImage, type UserImage} from '../db/schema.js';
+import { transformedImage, userImage, type UserImage } from '../db/schema.js';
 
 class ImageModel {
   async original(
