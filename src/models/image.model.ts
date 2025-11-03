@@ -1,6 +1,6 @@
 import { desc, eq, sql, and } from 'drizzle-orm';
 import { db } from '../db/index.js';
-import { transformedImage, userImage, type UserImage } from '../db/schema.js';
+import { transformedImage, userImage, type UserImage} from '../db/schema.js';
 
 class ImageModel {
   async original(
@@ -68,7 +68,7 @@ class ImageModel {
       )
       .limit(1);
 
-    return result;
+    return result ?? null;
   }
 
   async findAllTransformedImagesForUser(
@@ -99,9 +99,9 @@ class ImageModel {
       .innerJoin(userImage, eq(transformedImage.originalImageId, userImage.id))
       .where(eq(userImage.userId, userId));
 
-    const total = Number(countResult[0]?.count) ?? 0;
+    const total = Number(countResult[0]?.count || 0);
 
-    return { total, data: result };
+    return { total, data: result ?? [] };
   }
 }
 

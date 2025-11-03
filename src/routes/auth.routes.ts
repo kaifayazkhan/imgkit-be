@@ -26,9 +26,17 @@ const registerLimiter = rateLimit({
   legacyHeaders: false,
 });
 
+const refreshLimiter = rateLimit({
+  windowMs: 5 * 60 * 1000,
+  limit: 15,
+  message: 'Too many requests, please try again after 5 minutes',
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
 router.route('/register').post(registerLimiter, register);
 router.route('/login').post(loginLimiter, login);
 router.route('/logout').post(verifyJWT, logout);
-router.route('/refresh').post(refresh);
+router.route('/refresh').post(refreshLimiter, refresh);
 
 export default router;

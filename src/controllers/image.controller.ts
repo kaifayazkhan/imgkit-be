@@ -10,18 +10,26 @@ import { applyTransformations } from '../utils/sharp.js';
 import { env } from '../config/env.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import ApiResponse from '../utils/apiResponse.js';
-import AppError from '../utils/appError.js';
+import {
+  AppError,
+  ValidationError,
+  UnauthorizedError,
+} from '../utils/appError.js';
+import { HTTP_STATUS } from '../utils/httpStatus.js';
+import { ERROR_CODES } from '../utils/errorCodes.js';
+import logger from '../config/logger.js';
+
 import type { TransformedImageResponse } from '../types/image.type.js';
 
 export const uploadImage = asyncHandler(async (req: Request, res: Response) => {
   const { success, error, data } = UploadImagesSchema.safeParse(req.body);
 
   if (!success) {
-    throw new AppError(422, 'Validation Error', error?.issues);
+    throw new ValidationError(error?.issues);
   }
 
   if (!req.user?.id) {
-    throw new AppError(401, 'Unauthorized request');
+    throw new UnauthorizedError('Unauthorized request');
   }
 
   const userId = req.user.id;
@@ -29,7 +37,11 @@ export const uploadImage = asyncHandler(async (req: Request, res: Response) => {
   const uploadUrl = await getPresignedPutUrl(storageKey, data?.contentType);
 
   if (!uploadUrl) {
-    throw new AppError(500, 'Failed to generate pre-signed url');
+    throw new AppError(
+      HTTP_STATUS.INTERNAL_SERVER_ERROR,
+      'Failed to generate pre-signed url',
+      ERROR_CODES.INTERNAL_SERVER_ERROR
+    );
   }
 
   const imageId = await ImageModel.original(
@@ -40,11 +52,16 @@ export const uploadImage = asyncHandler(async (req: Request, res: Response) => {
   );
 
   if (!imageId) {
-    throw new AppError(500, 'Failed to create image record in database');
+    throw new AppError(
+      HTTP_STATUS.INTERNAL_SERVER_ERROR,
+      'Failed to create image record in database',
+      ERROR_CODES.INTERNAL_SERVER_ERROR
+    );
   }
 
+  logger.info(`Presigned upload url generated for user id: ${userId}`);
   return new ApiResponse(
-    201,
+    HTTP_STATUS.CREATED,
     {
       upload_url: uploadUrl,
       image_id: imageId.id,
@@ -63,35 +80,52 @@ export const transformImage = asyncHandler(
     } = TransformImageSchema.safeParse(req.body);
 
     if (!success) {
-      throw new AppError(422, 'Validation Error', error?.issues);
+      throw new ValidationError(error?.issues);
     }
 
     const imageId = Number(req.params.id);
 
     if (!imageId || imageId <= 0) {
-      throw new AppError(400, 'Invalid image id');
+      throw new AppError(
+        HTTP_STATUS.BAD_REQUEST,
+        'Invalid image id',
+        ERROR_CODES.BAD_REQUEST
+      );
     }
 
-    if (!req.user?.id) {
-      throw new AppError(401, 'Unauthorized request');
+    const userId = Number(req.user?.id);
+
+    if (!userId) {
+      throw new UnauthorizedError('Unauthorized request');
     }
 
-    const userId = Number(req.user.id);
     const originalImage = await ImageModel.getOriginalImage(imageId);
 
     if (!originalImage) {
-      throw new AppError(404, 'Image not found');
+      throw new AppError(
+        HTTP_STATUS.NOT_FOUND,
+        'Image not found',
+        ERROR_CODES.NOT_FOUND
+      );
     }
 
     if (originalImage.userId !== userId) {
-      throw new AppError(403, 'Forbidden');
+      throw new AppError(
+        HTTP_STATUS.FORBIDDEN,
+        'Forbidden',
+        ERROR_CODES.FORBIDDEN
+      );
     }
 
     const imageURL = `${env.IMAGE_DOMAIN}/${originalImage.storageKey}`;
     const imageBuffer = await getObject(originalImage.storageKey);
 
     if (!imageBuffer) {
-      throw new AppError(404, 'Image not found');
+      throw new AppError(
+        HTTP_STATUS.NOT_FOUND,
+        'Image not found',
+        ERROR_CODES.NOT_FOUND
+      );
     }
 
     const data = await applyTransformations(
@@ -100,7 +134,11 @@ export const transformImage = asyncHandler(
     );
 
     if (!data) {
-      throw new AppError(500, 'Failed to apply transformations to image');
+      throw new AppError(
+        HTTP_STATUS.INTERNAL_SERVER_ERROR,
+        'Failed to apply transformations to image',
+        ERROR_CODES.INTERNAL_SERVER_ERROR
+      );
     }
 
     const transformedImageName = `${originalImage.userId}-${uuidv4()}.${transformationSettings?.transformation.format}`;
@@ -114,7 +152,11 @@ export const transformImage = asyncHandler(
     );
 
     if (uploadImageResponse.$metadata.httpStatusCode !== 200) {
-      throw new AppError(500, 'Failed to upload transformed image to S3');
+      throw new AppError(
+        HTTP_STATUS.INTERNAL_SERVER_ERROR,
+        'Failed to upload transformed image to S3',
+        ERROR_CODES.INTERNAL_SERVER_ERROR
+      );
     }
 
     const transformedImage = await ImageModel.transform(
@@ -125,40 +167,59 @@ export const transformImage = asyncHandler(
     );
 
     if (!transformedImage) {
-      throw new AppError(500, 'Failed to record transformed image in database');
+      throw new AppError(
+        HTTP_STATUS.INTERNAL_SERVER_ERROR,
+        'Failed to record transformed image in database',
+        ERROR_CODES.INTERNAL_SERVER_ERROR
+      );
     }
 
     const transformedImageURL = `${env.IMAGE_DOMAIN}/${transformedImage.storageKey}`;
+    logger.info(`Image transformed successfully for request id: ${imageId}`);
 
-    return new ApiResponse(201, {
-      id: transformedImage.id,
-      original_image_url: imageURL,
-      transformed_image_url: transformedImageURL,
-      mime_type: imageMimeType,
-    }).send(res);
+    return new ApiResponse(
+      HTTP_STATUS.CREATED,
+      {
+        id: transformedImage.id,
+        original_image_url: imageURL,
+        transformed_image_url: transformedImageURL,
+        mime_type: imageMimeType,
+      },
+      'Image transformed successfully'
+    ).send(res);
   }
 );
 
 export const getTransformedImageById = asyncHandler(
   async (req: Request, res: Response) => {
     const userId = req.user?.id;
+
     if (!userId) {
-      throw new AppError(401, 'Unauthorized request');
+      throw new UnauthorizedError('Unauthorized request');
     }
 
     const imageId = Number(req.params.id);
 
     if (!imageId || imageId <= 0) {
-      throw new AppError(400, 'Invalid image id');
+      throw new AppError(
+        HTTP_STATUS.BAD_REQUEST,
+        'Invalid image id',
+        ERROR_CODES.BAD_REQUEST
+      );
     }
 
     const image = await ImageModel.findTransformedImageById(imageId, userId);
 
     if (!image) {
-      throw new AppError(404, 'Image not found');
+      throw new AppError(
+        HTTP_STATUS.NOT_FOUND,
+        'Image not found',
+        ERROR_CODES.NOT_FOUND
+      );
     }
 
-    return new ApiResponse(200, {
+    logger.info(`Image retrieved successfully for id: ${imageId}`);
+    return new ApiResponse(HTTP_STATUS.OK, {
       id: image.id,
       transformed_image_url: `${env.IMAGE_DOMAIN}/${image.transformedImageKey}`,
       original_image_url: `${env.IMAGE_DOMAIN}/${image.originalImageKey}`,
@@ -173,7 +234,7 @@ export const getUserTransformedImages = asyncHandler(
   async (req: Request, res: Response) => {
     const userId = req.user?.id;
     if (!userId) {
-      throw new AppError(401, 'Unauthorized request');
+      throw new UnauthorizedError('Unauthorized request');
     }
 
     const page = Math.max(Number(req.query.page) || 1, 1);
@@ -184,7 +245,7 @@ export const getUserTransformedImages = asyncHandler(
       await ImageModel.findAllTransformedImagesForUser(userId, limit, offset);
 
     if (result.length === 0) {
-      return new ApiResponse(200, [], '', {
+      return new ApiResponse(HTTP_STATUS.OK, [], '', {
         total: 0,
         total_pages: 0,
         page_size: limit,
@@ -205,7 +266,7 @@ export const getUserTransformedImages = asyncHandler(
       });
     }
 
-    return new ApiResponse(200, images, '', {
+    return new ApiResponse(HTTP_STATUS.OK, images, '', {
       total: total,
       total_pages: Math.ceil(total / limit),
       page_size: limit,

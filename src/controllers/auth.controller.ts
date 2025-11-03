@@ -3,7 +3,11 @@ import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import ApiResponse from '../utils/apiResponse.js';
-import AppError from '../utils/appError.js';
+import {
+  AppError,
+  ValidationError,
+  UnauthorizedError,
+} from '../utils/appError.js';
 import { RegisterUserSchema, LoginUserSchema } from '../validations/user.js';
 import UserModel from '../models/user.model.js';
 import {
@@ -12,12 +16,15 @@ import {
 } from '../utils/generateToken.js';
 import { cookieOptions } from '../utils/cookie.js';
 import { env } from '../config/env.js';
+import { HTTP_STATUS } from '../utils/httpStatus.js';
+import { ERROR_CODES } from '../utils/errorCodes.js';
+import logger from '../config/logger.js';
 
 export const register = asyncHandler(async (req: Request, res: Response) => {
   const { success, data, error } = RegisterUserSchema.safeParse(req.body);
 
   if (!success) {
-    throw new AppError(422, 'Validation Error', error?.issues);
+    throw new ValidationError(error?.issues);
   }
 
   const { name, email, password } = data;
@@ -25,7 +32,11 @@ export const register = asyncHandler(async (req: Request, res: Response) => {
   const user = await UserModel.findByEmail(email);
 
   if (user) {
-    throw new AppError(400, 'User already exists');
+    throw new AppError(
+      HTTP_STATUS.BAD_REQUEST,
+      'User already exists',
+      ERROR_CODES.BAD_REQUEST
+    );
   }
 
   const hashedPassword = await bcrypt.hash(password, 10);
@@ -33,11 +44,16 @@ export const register = asyncHandler(async (req: Request, res: Response) => {
   const newUser = await UserModel.create(name, email, hashedPassword);
 
   if (!newUser) {
-    throw new AppError(500, 'Failed to register');
+    throw new AppError(
+      HTTP_STATUS.INTERNAL_SERVER_ERROR,
+      'Failed to register',
+      ERROR_CODES.INTERNAL_SERVER_ERROR
+    );
   }
 
+  logger.info(`New user created with id: ${newUser.id}`);
   return new ApiResponse(
-    201,
+    HTTP_STATUS.CREATED,
     {
       id: newUser.id,
       name: newUser.name,
@@ -51,7 +67,7 @@ export const login = asyncHandler(async (req: Request, res: Response) => {
   const { success, data, error } = LoginUserSchema.safeParse(req.body);
 
   if (!success) {
-    throw new AppError(422, 'Validation Error', error?.issues);
+    throw new ValidationError(error?.issues);
   }
 
   const { email, password } = data;
@@ -59,13 +75,13 @@ export const login = asyncHandler(async (req: Request, res: Response) => {
   const user = await UserModel.findByEmail(email);
 
   if (!user?.id) {
-    throw new AppError(400, 'Invalid email or password');
+    throw new UnauthorizedError('Invalid email or password');
   }
 
   const comparePassword = await bcrypt.compare(password, user.password);
 
   if (!comparePassword) {
-    throw new AppError(400, 'Invalid email or password');
+    throw new UnauthorizedError('Invalid email or password');
   }
 
   const { accessToken, refreshToken } = generateAccessAndRefreshToken(user.id);
@@ -76,8 +92,9 @@ export const login = asyncHandler(async (req: Request, res: Response) => {
   res.cookie('accessToken', accessToken, cookieOptions);
   res.cookie('refreshToken', refreshToken, cookieOptions);
 
+  logger.info(`User logged in with id: ${user.id}`);
   return new ApiResponse(
-    200,
+    HTTP_STATUS.OK,
     {
       id: user.id,
       email: user.email,
@@ -89,7 +106,7 @@ export const login = asyncHandler(async (req: Request, res: Response) => {
 
 export const logout = asyncHandler(async (req: Request, res: Response) => {
   if (!req.user?.id) {
-    throw new AppError(401, 'Unauthorized request');
+    throw new UnauthorizedError('Unauthorized request');
   }
 
   const userId = Number(req.user.id);
@@ -98,13 +115,15 @@ export const logout = asyncHandler(async (req: Request, res: Response) => {
   res.clearCookie('accessToken', cookieOptions);
   res.clearCookie('refreshToken', cookieOptions);
 
+  logger.info(`User logged out with id ${userId}`);
+
   return new ApiResponse(200, {}, 'Logout successful').send(res);
 });
 
 export const refresh = asyncHandler(async (req: Request, res: Response) => {
   const refreshToken = req.cookies?.refreshToken;
   if (!refreshToken) {
-    throw new AppError(400, 'Missing refresh token');
+    throw new UnauthorizedError('Missing refresh token');
   }
 
   const { id: userId } = jwt.verify(refreshToken, env.REFRESH_TOKEN_SECRET) as {
@@ -112,13 +131,13 @@ export const refresh = asyncHandler(async (req: Request, res: Response) => {
   };
 
   if (!userId) {
-    throw new AppError(403, 'Invalid refresh token');
+    throw new UnauthorizedError('Invalid refresh token');
   }
 
   const user = await UserModel.findById(userId);
 
   if (!user?.id || !user.refreshToken) {
-    throw new AppError(403, 'Invalid refresh token');
+    throw new UnauthorizedError('Invalid refresh token');
   }
 
   const compareRefreshToken = await bcrypt.compare(
@@ -127,14 +146,16 @@ export const refresh = asyncHandler(async (req: Request, res: Response) => {
   );
 
   if (!compareRefreshToken) {
-    throw new AppError(403, 'Invalid refresh token');
+    throw new UnauthorizedError('Invalid refresh token');
   }
 
   const accessToken = generateAccessToken(userId);
 
   res.cookie('accessToken', accessToken, cookieOptions);
 
-  return new ApiResponse(200, {
+  logger.info(`New access token generated for user id: ${user.id}`);
+
+  return new ApiResponse(HTTP_STATUS.OK, {
     access_token: accessToken,
   }).send(res);
 });

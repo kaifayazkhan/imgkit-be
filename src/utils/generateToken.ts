@@ -1,6 +1,8 @@
 import jwt from 'jsonwebtoken';
 import { env } from '../config/env.js';
-import AppError from './appError.js';
+import { AppError } from './appError.js';
+import { HTTP_STATUS } from './httpStatus.js';
+import { ERROR_CODES } from './errorCodes.js';
 
 export const generateAccessToken = (id: number) => {
   try {
@@ -8,7 +10,11 @@ export const generateAccessToken = (id: number) => {
       expiresIn: '15m',
     });
   } catch (err) {
-    throw new AppError(500, 'Failed to generate access token');
+    throw new AppError(
+      HTTP_STATUS.INTERNAL_SERVER_ERROR,
+      'Failed to generate access token',
+      ERROR_CODES.INTERNAL_SERVER_ERROR
+    );
   }
 };
 
@@ -24,7 +30,11 @@ export const generateRefreshToken = (id: number) => {
       }
     );
   } catch (err) {
-    throw new AppError(500, 'Failed to generate refresh token');
+    throw new AppError(
+      HTTP_STATUS.INTERNAL_SERVER_ERROR,
+      'Failed to generate refresh token',
+      ERROR_CODES.INTERNAL_SERVER_ERROR
+    );
   }
 };
 
