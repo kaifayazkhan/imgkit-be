@@ -12,7 +12,9 @@ export const requestMiddleware = (
     const endHrTime = process.hrtime.bigint();
     const durationMs = Number(endHrTime - startHrTime) / 1_000_000;
 
-    logger.info({
+    const logLevel = res.statusCode < 400 ? 'info' : 'error';
+
+    logger[logLevel]({
       method: req.method,
       url: req.originalUrl,
       status: res.statusCode,

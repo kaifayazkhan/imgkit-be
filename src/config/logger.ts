@@ -28,7 +28,7 @@ if (env.NODE_ENV === 'production') {
 
 const logger = pino(
   {
-    level: env.NODE_ENV === 'development' ? 'debug' : 'info',
+    level: env.LOG_LEVEL ?? 'info',
   },
   transport
 );

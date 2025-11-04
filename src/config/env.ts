@@ -6,6 +6,7 @@ const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'production']).default('development'),
   BETTER_STACK_SOURCE_TOKEN: z.string().min(1),
   BETTER_STACK_ENDPOINT: z.url(),
+  LOG_LEVEL: z.string().default('info'),
   DATABASE_URL: z.string().min(1),
   ACCESS_TOKEN_SECRET: z.string().min(72),
   ACCESS_TOKEN_EXPIRY: z.string().default('15m'),
