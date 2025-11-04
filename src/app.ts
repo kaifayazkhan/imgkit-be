@@ -1,6 +1,8 @@
 import express from 'express';
 import cookieParser from 'cookie-parser';
 import cors from 'cors';
+import helmet from 'helmet';
+import compression from 'compression';
 import errorHandler from './middlewares/error.middleware.js';
 import { requestMiddleware } from './middlewares/request.middleware.js';
 import routes from './routes/index.js';
@@ -18,6 +20,8 @@ app.use(
     credentials: true,
   })
 );
+app.use(helmet());
+app.use(compression());
 
 app.use(requestMiddleware);
 
@@ -32,7 +36,6 @@ app.get('/', (req, res) => {
 app.use((req, res, next) => {
   res.status(HTTP_STATUS.NOT_FOUND).send('Requested page was not found.');
 });
-
 
 app.use(errorHandler);
 
