@@ -1,4 +1,5 @@
 import jwt from 'jsonwebtoken';
+import ms from 'ms';
 import { env } from '../config/env.js';
 import { AppError } from './appError.js';
 import { HTTP_STATUS } from './httpStatus.js';
@@ -7,7 +8,7 @@ import { ERROR_CODES } from './errorCodes.js';
 export const generateAccessToken = (id: number) => {
   try {
     return jwt.sign({ id }, env.ACCESS_TOKEN_SECRET, {
-      expiresIn: '15m',
+      expiresIn: env.ACCESS_TOKEN_EXPIRY as ms.StringValue,
     });
   } catch (err) {
     throw new AppError(
@@ -26,7 +27,7 @@ export const generateRefreshToken = (id: number) => {
       },
       env.REFRESH_TOKEN_SECRET,
       {
-        expiresIn: '15d',
+        expiresIn: env.REFRESH_TOKEN_EXPIRY as ms.StringValue,
       }
     );
   } catch (err) {

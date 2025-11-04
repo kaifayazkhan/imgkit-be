@@ -77,7 +77,7 @@ http://localhost:3000
 ### Authentication Flow
 
 | Step | Endpoint                | Method | Description                              |
-| ---- | ----------------------- |--------| ---------------------------------------- |
+| ---- | ----------------------- | ------ | ---------------------------------------- |
 | 1    | `/api/v1/auth/register` | POST   | Register a new user                      |
 | 2    | `/api/v1/auth/login`    | POST   | Login and receive tokens                 |
 | 3    | `/api/v1/auth/refresh`  | POST   | Refresh access token using stored cookie |

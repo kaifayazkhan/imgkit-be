@@ -5,6 +5,7 @@ import { AppError, UnauthorizedError } from '../utils/appError.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { HTTP_STATUS } from '../utils/httpStatus.js';
 import { ERROR_CODES } from '../utils/errorCodes.js';
+import { ACCESS_TOKEN_KEY } from '../utils/constants.js';
 
 interface JwtPayload {
   id: number;
@@ -12,7 +13,9 @@ interface JwtPayload {
 
 export const verifyJWT = asyncHandler(
   async (req: Request, res: Response, next: NextFunction) => {
-    const token = req.headers.authorization?.split(' ')[1];
+    const token =
+      req.cookies?.[ACCESS_TOKEN_KEY] ||
+      req.headers.authorization?.split(' ')[1];
 
     if (!token) {
       throw new UnauthorizedError('No token provided');
