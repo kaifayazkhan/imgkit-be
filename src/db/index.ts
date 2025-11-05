@@ -6,12 +6,12 @@ import logger from '../config/logger.js';
 
 const db = drizzle(env.DATABASE_URL, {
   schema,
-  logger: {
+  logger: env.NODE_ENV !== 'production' && {
     logQuery(query, params) {
       logger.debug(
         {
           query,
-          params: env.NODE_ENV === 'production' ? '[REDACTED]' : params,
+          params,
         },
         'DB query'
       );
