@@ -11,6 +11,10 @@ const pool = new Pool({
   connectionTimeoutMillis: 5000,
 });
 
+pool.on('error', (err) => {
+  logger.error({ err }, 'Unexpected database pool error');
+});
+
 const db = drizzle(pool, {
   logger: env.NODE_ENV !== 'production' && {
     logQuery(query, params) {
@@ -25,4 +29,4 @@ const db = drizzle(pool, {
   },
 });
 
-export { db };
+export { db, pool };

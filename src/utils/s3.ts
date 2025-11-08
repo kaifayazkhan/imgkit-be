@@ -29,7 +29,7 @@ export async function getPresignedPutUrl(key: string, contentType: string) {
 
     return await getSignedUrl(client, command, { expiresIn: 180 });
   } catch (error) {
-    logger.error(`Failed to generate presigned url for put request: ${error}`);
+    logger.error({ error }, 'Failed to generate presigned url for put request');
     throw new Error('Failed to generate presigned url');
   }
 }
@@ -49,7 +49,7 @@ export async function uploadObject(
 
     return await client.send(command);
   } catch (error) {
-    logger.error(`Failed to upload object: ${error}`);
+    logger.error({ error }, 'Failed to upload object');
     throw error instanceof Error ? error : new Error('Failed to upload object');
   }
 }
@@ -68,7 +68,7 @@ export async function getObject(key: string) {
 
     return await response.Body.transformToByteArray();
   } catch (error) {
-    logger.error(`Failed to get object: ${error}`);
+    logger.error({ error }, 'Failed to get object');
     throw error instanceof Error ? error : new Error('Failed to get object');
   }
 }
@@ -81,7 +81,7 @@ export async function deleteObject(key: string) {
     });
     await client.send(command);
   } catch (error) {
-    logger.error(`Failed to delete object: ${error}`);
+    logger.error({ error }, 'Failed to delete object');
     throw error instanceof Error ? error : new Error('Failed to delete object');
   }
 }
